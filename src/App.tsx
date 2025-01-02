@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { GridNode } from './components/GridNode'
 import { Controls } from './components/Controls'
 import { Grid, Node, NodeType } from './types/grid'
@@ -21,6 +21,55 @@ function App() {
 	const [isVisualizing, setIsVisualizing] = useState(false)
 	const [mouseIsPressed, setMouseIsPressed] = useState(false)
 	const [draggedNodeType, setDraggedNodeType] = useState<NodeType | null>(null)
+
+	const handleRandomizeWalls = useCallback(() => {
+		const newGrid = grid.map(rowArray => [...rowArray])
+
+		// Add random walls with ~30% probability
+		for (let row = 0; row < ROWS; row++) {
+			for (let col = 0; col < COLS; col++) {
+				// Skip start and end nodes
+				if (
+					newGrid[row][col].type === 'start' ||
+					newGrid[row][col].type === 'end'
+				) {
+					continue
+				}
+
+				// Add walls randomly
+				if (Math.random() < 0.25) {
+					newGrid[row][col].type = 'wall'
+				}
+			}
+		}
+
+		// Ensure there's a clear path around start and end nodes
+		const clearAroundNode = (row: number, col: number) => {
+			for (let i = -1; i <= 1; i++) {
+				for (let j = -1; j <= 1; j++) {
+					const newRow = row + i
+					const newCol = col + j
+					if (
+						newRow >= 0 &&
+						newRow < ROWS &&
+						newCol >= 0 &&
+						newCol < COLS &&
+						newGrid[newRow][newCol].type === 'wall'
+					) {
+						newGrid[newRow][newCol].type = 'empty'
+					}
+				}
+			}
+		}
+
+		// Clear area around start and end nodes
+		const startNode = newGrid[9][9]
+		const endNode = newGrid[9][29]
+		clearAroundNode(startNode.row, startNode.col)
+		clearAroundNode(endNode.row, endNode.col)
+
+		setGrid(newGrid)
+	}, [grid])
 
 	const handleNodeClick = (row: number, col: number) => {
 		if (isVisualizing) return
@@ -120,7 +169,7 @@ function App() {
 		<div className="min-h-screen bg-gray-100 p-8">
 			<div className="max-w-7xl mx-auto">
 				<h1 className="text-3xl font-bold text-gray-800 mb-4">
-					Pathfinding Visualizer
+					Dijkstra Pathfinding Visualizer
 				</h1>
 				<p className="text-gray-600 mb-6">
 					Click to add/remove walls. Drag start (green) and end (red) points to
@@ -130,6 +179,7 @@ function App() {
 				<Controls
 					onVisualize={visualize}
 					onClear={clearGrid}
+					onRandomizeWalls={handleRandomizeWalls}
 					isVisualizing={isVisualizing}
 				/>
 
